@@ -19,6 +19,11 @@ app.use(cors());
 
 app.use('/public', express.static(`${process.cwd()}/public`));
 
+app.use('/', function(req,res,next){
+  console.log(req.method, req.baseUrl, req.hostname)
+  next();
+})
+
 app.get('/', function (req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
 });
@@ -33,10 +38,11 @@ app.get('/api/shorturl/:url', async function (req, res) {
     if(findurl)
     {
       res.redirect(findurl.original_url)
+      return
     }
-    res.json("URL not found");
+    throw "invalid url"
   } catch (err) {
-    res.json({ error: err })
+    res.json({ error: "invalid url" })
   }
 })
 
@@ -45,7 +51,8 @@ app.post('/api/shorturl/', async function (req, res) {
     const url = req.body.url;
     const urlObj = new URL(url);
     dns.lookup(urlObj.hostname, async function (err, address, family) {
-      if (err) {
+      try{
+        if (err) {
         throw "Invalid URL"
       }
 
@@ -74,6 +81,11 @@ app.post('/api/shorturl/', async function (req, res) {
 
         res.json((({ original_url, short_url }) => ({ original_url, short_url }))(data))
       })
+      }
+      catch(err){
+        res.json({error: err})
+      }
+      
     })
   } catch (err) {
     res.json({ error: "invalid url" });
